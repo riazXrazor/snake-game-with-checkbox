@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            flex-wrap: wrap;
+            flex: 1;
+            margin: 0 auto;
+            overflow: hidden;
+            background-color: #000;
+        }
+
+        .container,.gameover {
+            position: absolute;
+            width: 802px;
+            height: 602px;
+            border: 1px dashed #000;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .gameover{
+            background-color: rgba(0, 0, 0, 0.7);
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            display: none;
+        }
+
+        .gameover h1{
+            text-align: center;
+            margin-top: 10%;
+            flex: 1;
+            
+            color: red;
+            
+        }
+        .gameover button{
+            max-width: 50%;
+            margin-bottom: 20%;
+            padding: 10px;
+            font-size: 1em;
+        }
+
+        .score{
+            color: #fff;
+            position: absolute;
+            width: 25%;
+            height: 35px;
+            right:0;
+            top:-35px;
+        }
+        .score h1{
+            display: inline-block;
+        }
+
+        .page-title{
+            font-size: 3em;
+            text-align: center;
+            color: #fff;
+            width: 100%;
+            display: block;
+        }
+
+        .author{
+            position: absolute;
+            bottom: 1%;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body>
+    <span class="author">Made for Fun With 💖 by Riaz laskar</span>
+    <h1 class="page-title">Snake Game made with HTML checkbox 😎</h1>
+    <div class="container">
+        <div class="score">
+            <h1 class="label">Score:</h1>
+            <h1 class="score-value">0</h1>
+        </div>
+    </div>
+    <div class="gameover">
+        <h1>Game Over</h1>
+        <h1>Your Score: <span class="y-score">0</span></h1>
+        <button onclick="window.location.reload();">Play Again</button>
+    </div>
+    <script>
+        const row = Math.floor(800 / 14);
+        const col = Math.floor(600 / 14) + 1;
+
+        const c = document.querySelector('.container')
+        const go = document.querySelector('.gameover')
+        const scoreDisplay = document.querySelector('.score-value')
+        const yscoreDisplay = document.querySelector('.y-score')
+        const checkbox = document.createElement('input')
+        const checkboxs = [];
+        const snakePos = {
+            positions: [
+                { x: 2, y: 2, head: true },
+                { x: 3, y: 2, head: false },
+                { x: 4, y: 2, head: false }
+            ]
+        }
+        //top,right,bottom,left
+        let direction = [0, 1, 0, 0]
+        let gameover = false;
+        let frames = 0;
+        let raf = null
+        let foodPos = { x: Math.floor(Math.random() * row), y: Math.floor(Math.random() * col) }
+        let score = 0;
+
+
+        checkbox.setAttribute('type', 'checkbox');
+        checkbox.style.flex = '1';
+        console.log({ row, col })
+        for (let i = 0; i < col; i++) {
+            const rows = []
+            for (let j = 0; j < row; j++) {
+                const cb = checkbox.cloneNode()
+                cb.setAttribute('data-x', i)
+                cb.setAttribute('data-y', j)
+                rows.push(cb.cloneNode(true));
+            }
+            checkboxs.push(rows)
+        }
+
+        for (let i = 0; i < col; i++) {
+            for (let j = 0; j < row; j++) {
+                const d = document.createElement('div');
+                d.style.maxWidth = '14px'
+                d.style.maxHeight = '14px'
+                d.style.minWidth = '14px'
+                d.style.minHeight = '14px'
+                d.style.overflow = 'hidden'
+                d.style.display = 'flex';
+                d.style.flex = '1';
+                d.style.justifyContent = 'center';
+                d.style.alignItems = 'center';
+                d.appendChild(checkboxs[i][j]);
+                c.appendChild(d)
+            }
+        }
+
+        function renderSnake() {
+
+            for (let i = 0; i < snakePos.positions.length; i++) {
+                const s = snakePos.positions[i]
+                if(checkboxs[s.y] && checkboxs[s.y][s.x])
+                    checkboxs[s.y][s.x].checked = true;
+            }
+
+        }
+
+        function renderFood() {
+
+            checkboxs[foodPos.y][foodPos.x].checked = true
+
+
+        }
+
+        function clearCanvas() {
+            for (let i = 0; i < col; i++) {
+                for (let j = 0; j < row; j++) {
+                    checkboxs[i][j].checked = false;
+                }
+            }
+        }
+
+        function fillCanvas() {
+            for (let i = 0; i < col; i++) {
+                for (let j = 0; j < row; j++) {
+                    checkboxs[i][j].checked = true;
+                }
+            }
+        }
+
+
+
+        document.addEventListener("keydown", function (e) {
+                const snake = { ...snakePos.positions.find(o => o.head) }
+                // console.log(e.keyCode)
+                if (e.keyCode == 37) {
+                    snake.x--
+                    if (snake.x  < 0) {
+                        snake.x = 0
+                    }
+                    direction = [0, 0, 0, 1]
+                }
+
+                if (e.keyCode == 39) {
+                    snake.x++
+                    if (snake.x > row) {
+                        snake.x = row
+                    }
+                    direction = [0, 1, 0, 0]
+                }
+
+                if (e.keyCode == 40) {
+                    snake.y++
+                    if (snake.y + 0 < 0) {
+                        snake.y = 0
+                    }
+                    direction = [0, 0, 1, 0]
+                }
+
+                if (e.keyCode == 38) {
+                    snake.y--
+                    if (snake.y > col) {
+                        snake.y = col
+                    }
+                    direction = [1, 0, 0, 0]
+                }
+
+                const last = snakePos.positions.pop()
+                last.head = true;
+                last.x = snake.x
+                last.y = snake.y
+                snake.head = false;
+
+                snakePos.positions.unshift(last)
+                if (last.x === foodPos.x && last.y === foodPos.y) {
+                    snakePos.positions.push({ ...foodPos })
+                    foodPos = { x: Math.floor(Math.random() * row), y: Math.floor(Math.random() * col) }
+                    score += 100;
+                    scoreDisplay.textContent = score
+                    yscoreDisplay.textContent = score
+                }
+
+                if(last.x >= row || last.x < 1 || last.y >= col || last.y < 1) {
+                    gameover = true
+                }
+
+            })
+
+
+
+        function gameLoop() {
+            clearCanvas();
+            if(!gameover) {
+             renderSnake();
+             renderFood();
+            } else {
+                go.style.display = 'flex';
+                cancelAnimationFrame(raf)
+            }
+
+
+
+            if(frames > 60){
+     
+                const [top, right, bottom, left] = direction
+
+                const snake = { ...snakePos.positions.find(o => o.head) }
+                if (left) {
+                    snake.x--
+                    if (snake.x < 0) {
+                        snake.x = 0
+                    }
+                }
+
+                if (right) {
+                    snake.x++
+                    if (snake.x  > row) {
+                        snake.x = row - 1
+                    }
+                }
+
+                if (bottom) {
+                    snake.y++
+                    if (snake.y  < 0) {
+                        snake.y = 0
+                    }
+                }
+
+                if (top) {
+                    snake.y--
+                    if (snake.y  > col) {
+                        snake.y = col - 1
+                    }
+                }
+
+                const last = snakePos.positions.pop()
+                last.head = true;
+                last.x = snake.x
+                last.y = snake.y
+                snake.head = false;
+
+                snakePos.positions.unshift(last)
+                if (last.x === foodPos.x && last.y === foodPos.y) {
+                    snakePos.positions.push({ ...foodPos })
+                    foodPos = { x: Math.floor(Math.random() * row), y: Math.floor(Math.random() * col) }
+                    score += 100;
+                    yscoreDisplay.textContent = score
+                    scoreDisplay.textContent = score
+                }
+
+                
+                if(last.x >= row || last.x < 0 || last.y >= col || last.y < 0) {
+                    gameover = true
+                }
+                frames = 0
+            }
+
+            frames++;
+
+            raf = requestAnimationFrame(gameLoop)
+        }
+
+
+        
+
+            gameLoop();
+        
+
+
+
+
+    </script>
+</body>
+
+</html>
